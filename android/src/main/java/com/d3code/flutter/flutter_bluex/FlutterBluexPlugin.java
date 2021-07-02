@@ -196,11 +196,11 @@ public class FlutterBluexPlugin implements FlutterPlugin, MethodCallHandler {
                     Boolean isSecure = false;
                     Set<BluetoothDevice> devices = bluetoothAdapter.getBondedDevices();
                     BluetoothDevice device = null;
-                    devices.stream().map(d => {
+                    for(BluetoothDevice d : devices) {
                       if(address.equals(d.getAddress())){
                         device = d;
                       }
-                    })
+                    }
                     isSecure = call.argument("isSecure");
                     if (isSecure == null) {
                         isSecure = false;
