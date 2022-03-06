@@ -14,10 +14,10 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   FlutterBluex flutterbluetoothadapter = FlutterBluex();
-  StreamSubscription _btConnectionStatusListener, _btReceivedMessageListener;
+  StreamSubscription? _btConnectionStatusListener, _btReceivedMessageListener;
   String _connectionStatus = "NONE";
   List<BtDevice> devices = [];
-  String _recievedMessage;
+  String _recievedMessage = 'NO MESSAGE';
   TextEditingController _controller = TextEditingController();
 
   @override
@@ -97,7 +97,7 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
             Text(
-              _recievedMessage ?? "NO MESSAGE",
+              _recievedMessage,
               style: TextStyle(fontSize: 24),
             ),
             Row(
@@ -119,8 +119,7 @@ class _MyAppState extends State<MyApp> {
                     padding: const EdgeInsets.all(8.0),
                     child: RaisedButton(
                       onPressed: () {
-                        flutterbluetoothadapter.sendMessage(
-                            _controller.text ?? "no msg",
+                        flutterbluetoothadapter.sendMessage(_controller.text,
                             sendByteByByte: false);
 //                        flutterbluetoothadapter.sendMessage(".",
 //                            sendByteByByte: true);
@@ -152,8 +151,7 @@ class _MyAppState extends State<MyApp> {
         InkWell(
           key: UniqueKey(),
           onTap: () {
-            flutterbluetoothadapter.startClient(
-                devices.indexOf(element).address, true);
+            flutterbluetoothadapter.startClient(element.address, true);
           },
           child: Container(
             padding: EdgeInsets.all(4),

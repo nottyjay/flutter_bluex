@@ -1,12 +1,32 @@
 package com.d3code.flutter.flutter_bluex;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
+import android.bluetooth.BluetoothSocket;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Handler;
+import android.os.Message;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Set;
+import java.util.UUID;
+
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
+import io.flutter.plugin.common.PluginRegistry;
 
 /** FlutterBluexPlugin */
 public class FlutterBluexPlugin implements FlutterPlugin, MethodCallHandler {
@@ -27,6 +47,7 @@ public class FlutterBluexPlugin implements FlutterPlugin, MethodCallHandler {
     private static EventChannel.EventSink receiveMessageSink;
     static Context context;
     Intent btEnabelingIntent;
+    ClientClass clientClass;
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
@@ -41,7 +62,7 @@ public class FlutterBluexPlugin implements FlutterPlugin, MethodCallHandler {
 
     public static void registerWith(PluginRegistry.Registrar registrar) {
         context = registrar.context();
-        BluetoothadapterPlugin flutterbluetoothadapterPlugin = new BluetoothadapterPlugin();
+        FlutterBluexPlugin flutterbluetoothadapterPlugin = new FlutterBluexPlugin();
         final MethodChannel channel = new MethodChannel(registrar.messenger(), "bluetoothadapter");
         channel.setMethodCallHandler(flutterbluetoothadapterPlugin);
         final EventChannel connectionStatusEventChannel = new EventChannel(registrar.messenger(), "connection_status");
@@ -194,9 +215,9 @@ public class FlutterBluexPlugin implements FlutterPlugin, MethodCallHandler {
                 try {
                     String address = call.argument("address");
                     Boolean isSecure = false;
-                    Set<BluetoothDevice> devices = bluetoothAdapter.getBondedDevices();
+                    Set<BluetoothDevice> deviceSet = bluetoothAdapter.getBondedDevices();
                     BluetoothDevice device = null;
-                    for(BluetoothDevice d : devices) {
+                    for(BluetoothDevice d : deviceSet) {
                       if(address.equals(d.getAddress())){
                         device = d;
                       }
@@ -205,7 +226,10 @@ public class FlutterBluexPlugin implements FlutterPlugin, MethodCallHandler {
                     if (isSecure == null) {
                         isSecure = false;
                     }
-                    ClientClass clientClass = new ClientClass(device, isSecure);
+                    if(clientClass != null) {
+                        clientClass.close();
+                    }
+                    clientClass = new ClientClass(device, isSecure);
                     clientClass.start();
                     result.success(true);
                 } catch (Exception except) {
@@ -231,6 +255,10 @@ public class FlutterBluexPlugin implements FlutterPlugin, MethodCallHandler {
                 } catch (Exception except) {
                     result.success(false);
                 }
+                break;
+            case "close":
+                clientClass.close();
+                result.success(null);
                 break;
             default:
                 result.notImplemented();
@@ -331,12 +359,24 @@ public class FlutterBluexPlugin implements FlutterPlugin, MethodCallHandler {
                 handler.sendMessage(message);
             }
         }
+
+        public void close() {
+            if(socket != null){
+                try {
+                    sendRecieve.interrupt();
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                ;
+            }
+        }
     }
 
     private class SendRecieve extends Thread {
         private final BluetoothSocket bluetoothSocket;
         private final InputStream inputStream;
-        private final OutputStream outputStream;
+        private final OutputStream outputStream;      
 
         public SendRecieve(BluetoothSocket socket) {
             bluetoothSocket = socket;
@@ -358,6 +398,16 @@ public class FlutterBluexPlugin implements FlutterPlugin, MethodCallHandler {
             int bytes;
 
             while (true) {
+              if(Thread.currentThread().isInterrupted()){
+                  try {
+                      inputStream.close();
+                      outputStream.close();
+                  } catch (IOException e) {
+                      e.printStackTrace();
+                  }
+
+                break;
+              }
                 try {
                     bytes = inputStream.read(buffer);
                     handler.obtainMessage(STATE_MESSAGE_RECEIVED, bytes, -1, buffer).sendToTarget();

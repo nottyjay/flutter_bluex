@@ -30,7 +30,7 @@ class FlutterBluex {
 
   /// Gets a Particular Paired from the list of paired devices from its Device(Mac) address
   Future<BtDevice?> getDevice(String address) async {
-    Map device =
+    Map? device =
         await _channel.invokeMethod('getBtDevice', {"address": address});
     if (device == null) {
       return null;
@@ -47,26 +47,30 @@ class FlutterBluex {
 
   /// Starts Bluetooth Server, now the device works as a bluetooth server
   Future<bool> startServer() async {
-    var result = await _channel.invokeMethod('startServer');
-    return result ?? false;
+    bool result = await _channel.invokeMethod('startServer');
+    return result;
   }
 
   /// Starts Bluetooth Client, now the device works as a bluetooth client
   Future<bool> startClient(String address, [bool isSecure = false]) async {
-    var result = await _channel.invokeMethod('startClient', {
-      "address": address ?? 0,
-      "isSecure": isSecure ?? false,
+    bool result = await _channel.invokeMethod('startClient', {
+      "address": address,
+      "isSecure": isSecure,
     });
-    return result ?? false;
+    return result;
+  }
+
+  void closeClient() async {
+    await _channel.invokeMethod('close');
   }
 
   /// Sends message from client to server and vice versa, byte by byte or as a data stream
   Future<bool> sendMessage(String message, {bool? sendByteByByte}) async {
     bool result = await _channel.invokeMethod('sendMessage', {
-      "message": message ?? "",
+      "message": message,
       "sendByteByByte": sendByteByByte ?? false,
     });
-    return result ?? false;
+    return result;
   }
 
   /// Stream which listens to the connection status between client and server
@@ -82,8 +86,8 @@ class FlutterBluex {
 
 /// A Data structure to hold device information of a paired bluetooth device
 class BtDevice {
-  String? address;
-  String? name;
+  late String address;
+  late String name;
 
   BtDevice(this.address, this.name);
 
